@@ -1,4 +1,5 @@
 package Server;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.ArrayList;
@@ -20,11 +21,8 @@ public class Server {
             serverSocket = new ServerSocket(port);
             System.out.println("Started Server!");
 
-            clientHandlers = new ArrayList<>();
-            clientHandlers.add(new ClientHandler());
-
-            listenForClients();
             System.out.println("Listening at Port: " + port);
+            listenForClients();
 
         } catch (IOException i) {
             System.out.println("Failed to Start Server Socket!");
@@ -34,30 +32,20 @@ public class Server {
 
     public void listenForClients() {
         new Thread(new Runnable() {
-
             @Override
-            public void run() {
-                while (true) {
-                    if (clientHandlers.size() != connectedClients + 1) {
-                        clientHandlers.add(new ClientHandler(ser));
-                    }
-                    try {
-                        if (!clientHandlers.get(connectedClients).isConnected) {
-                            clientHandlers.get(connectedClients).socket = serverSocket.accept();
-                            clientHandlers.get(connectedClients).isConnected = true;
-                            clientHandlers.get(connectedClients).listenForPackets();
-                            connectedClients++;
-
-                            System.out.println(clientHandlers.get(connectedClients - 1).username + " has Joined!");
-                        }
-                    } catch (IOException i) {
-                        System.out.println("Error occured while listening for clients");
-                        System.out.println(i);
-                    }
+            public void run() { 
+                if (connectedClients == 0 || clientHandlers.size() - 1 != connectedClients + 1) {
+                    clientHandlers = new ArrayList<>();
+                    clientHandlers.add(new ClientHandler(serverSocket));
                 }
-            }
-        }).start();
-    }
 
+                if (clientHandlers.get(connectedClients).socket.isConnected()) {
+                    System.out.println(clientHandlers.get(connectedClients).username + " Has Connected!");
+                    connectedClients++;
+                }
+
+            }
+        }).start();   
+    }
 
 }
