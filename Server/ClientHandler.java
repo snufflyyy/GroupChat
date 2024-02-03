@@ -6,37 +6,41 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 
+import Packet.Packet;
+import Packet.PacketType;
+
 public class ClientHandler {
+
+    public boolean isInitalized;
     
     public Socket socket;
 
-    private ObjectInputStream objectInputStream;
     private ObjectOutputStream objectOutputStream;
+    private ObjectInputStream objectInputStream;
 
     public String username;
 
     public ClientHandler(ServerSocket serverSocket) {
         acceptClient(serverSocket);
-
-        System.out.println("Listening for Packets");
+        initStreams();
         listenForPackets();
     }
 
     public void acceptClient(ServerSocket serverSocket) {
         try {
             socket = serverSocket.accept();
-            System.out.println("Connected to Client");
-
-            try {
-                objectInputStream = new ObjectInputStream(socket.getInputStream());
-                objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
-            } catch (IOException i) {
-                System.out.println("Error Occured While Starting I/O Streams");
-                System.out.println(i);
-            }
-
         } catch (IOException i) {
             System.out.println("Error Occured While Listening for Client");
+        }
+    }
+
+    private void initStreams() {
+        try {
+            objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+            objectInputStream = new ObjectInputStream(socket.getInputStream());
+        } catch (IOException i) {
+            System.out.println("Error Occured While Starting I/O Streams");
+            System.out.println(i);
         }
     }
 
@@ -51,8 +55,13 @@ public class ClientHandler {
                     try {
                         packet = (Packet) objectInputStream.readObject();
                     } catch (IOException i) {
-                        System.out.println("Error Occured While Trying to Get Packet From Client");
-                        System.out.println(i);
+                        System.out.println(username + " Has Disconnected!");
+                        try {
+                            socket.close();
+                        } catch (IOException o) {
+                            System.out.println("Error Occured Trying to Close Client Socket!");
+                            System.out.println(o);
+                        }
                     } catch (ClassNotFoundException c) {
                         System.out.println("Error Occured: Packet Class Not Found!");
                         System.out.println(c);
@@ -61,8 +70,8 @@ public class ClientHandler {
                     if (packet != null) {
                         switch (packet.type) {
                             case INIT:
-                                packet.sender = username;
-                                System.out.println(username);
+                                username = packet.sender;
+                                isInitalized = true;
                                 break;
                         }
                     }
@@ -70,5 +79,23 @@ public class ClientHandler {
                 }
             }
         }).start();
+    }
+
+    public void sendMessage(String message) {
+        Packet messagePacket = new Packet();
+        messagePacket.type = PacketType.MESSAGE;
+        messagePacket.sender = "SERVER";
+        messagePacket.data = message;
+
+        sendPacket(messagePacket);
+    }
+
+    private void sendPacket(Packet packet) {
+        try {
+            objectOutputStream.writeObject(packet);
+        } catch (IOException i) {
+            System.out.println("Error Occured While Trying to Send Packet");
+            System.out.println(i);
+        }
     }
 }

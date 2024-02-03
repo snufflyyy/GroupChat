@@ -1,4 +1,4 @@
-package Server;
+package Packet;
 
 public enum PacketType {
     INIT,

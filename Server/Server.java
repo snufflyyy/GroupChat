@@ -21,6 +21,8 @@ public class Server {
             serverSocket = new ServerSocket(port);
             System.out.println("Started Server!");
 
+            clientHandlers = new ArrayList<>();
+
             System.out.println("Listening at Port: " + port);
             listenForClients();
 
@@ -28,24 +30,55 @@ public class Server {
             System.out.println("Failed to Start Server Socket!");
             System.out.println(i);
         }
+
+        while (!(connectedClients >= 1)) {
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException i) {
+
+            }
+        }
+
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException i) {
+            
+        }
+
+        broadcastMessage("test");
+
+        //disconnectChecker();
     }
 
     public void listenForClients() {
         new Thread(new Runnable() {
             @Override
-            public void run() { 
-                if (connectedClients == 0 || clientHandlers.size() - 1 != connectedClients + 1) {
-                    clientHandlers = new ArrayList<>();
+            public void run() {
+                while (connectedClients == clientHandlers.size()) {
                     clientHandlers.add(new ClientHandler(serverSocket));
-                }
 
-                if (clientHandlers.get(connectedClients).socket.isConnected()) {
-                    System.out.println(clientHandlers.get(connectedClients).username + " Has Connected!");
-                    connectedClients++;
-                }
+                    while (!clientHandlers.get(connectedClients).isInitalized) {
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException e) {
+                            System.out.println("Error Occured While Checking if Client is Initalized!");
+                            System.exit(1);
+                        }
+                    }
 
+                    if (clientHandlers.get(connectedClients).socket.isConnected()) {
+                        System.out.println(clientHandlers.get(connectedClients).username + " Has Connected!");
+                        connectedClients++;
+                    }
+                }
             }
         }).start();   
     }
 
+    public void broadcastMessage(String message) {
+        for (int i = 0; i < clientHandlers.size(); i++) {
+            System.out.println("Sent Message!");
+            clientHandlers.get(i).sendMessage(message);
+        }
+    }
 }

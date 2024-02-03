@@ -1,23 +1,20 @@
 package Client;
+
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.InputStream;
 import java.io.ObjectOutputStream;
 import java.io.ObjectInputStream;
 import java.net.Socket;
 import java.util.Scanner;
 
-public class Client {
+import Packet.Packet;
+import Packet.PacketType;
 
-    public boolean isConnected;
+public class Client {
 
     private Socket socket;
     private String username;
 
-    private OutputStream outputStream;
     private ObjectOutputStream objectOutputStream;
-
-    private InputStream inputStream;
     private ObjectInputStream objectInputStream;
 
     public static void main(String[] args) {
@@ -32,17 +29,19 @@ public class Client {
             username = usernameScanner.nextLine();
         }
 
-        connect("localhost", 1234, username);
+        connect("localhost", 1234);
+
         initStreams();
 
-        //System.out.println("Listening for Packets");
-        //listenForPackets();
+        System.out.println("Listening for Packets");
+        listenForPackets();
+
+        sendInit();
     }
 
-    public void connect(String ipAddress, int port, String username) {
+    private void connect(String ipAddress, int port) {
         try {
             socket = new Socket(ipAddress, port);
-            isConnected = true;
             System.out.println("Connected to Server!");
         } catch (IOException i) {
             System.out.println("Error Occured When Trying to Connecting to Chat Server");
@@ -52,33 +51,40 @@ public class Client {
 
     private void initStreams() {
         try {
-            objectInputStream = new ObjectInputStream(socket.getInputStream());
             objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+            objectInputStream = new ObjectInputStream(socket.getInputStream());
         } catch (IOException i) {
             System.out.println("Error Occured While Starting I/O Streams");
             System.out.println(i);
         }
-
-        System.out.println("test");
     }
 
-    public void listenForPackets() {
+    private void listenForPackets() {
         new Thread(new Runnable() {
             @Override
             public void run() {
 
-                while (isConnected) {
+                while (socket.isConnected()) {
                     Packet packet = null;
 
                     try {
                         packet = (Packet) objectInputStream.readObject();
                     } catch (IOException i) {
-                        System.out.println("Error Occured While Trying to Get Packet From Client");
-                        System.out.println(i);
+                        System.out.println("Server Has Closed!");
+                        System.exit(0);
                     } catch (ClassNotFoundException c) {
                         System.out.println("Error Occured: Packet Class Not Found!");
                         System.out.println(c);
                     }
+
+                    if (packet != null) {
+                        switch (packet.type) {
+                            case MESSAGE:
+                                System.out.println(packet.data);
+                                break;
+                        }
+                    }
+
                 }
             }
         }).start();
@@ -92,7 +98,7 @@ public class Client {
         sendPacket(initPacket);
     }
 
-    public void sendPacket(Packet packet) {
+    private void sendPacket(Packet packet) {
         try {
             objectOutputStream.writeObject(packet);
         } catch (IOException i) {
