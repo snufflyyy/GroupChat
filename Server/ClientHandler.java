@@ -12,6 +12,8 @@ import Packet.PacketType;
 public class ClientHandler {
 
     public boolean isInitalized;
+
+    private boolean isListening;
     
     public Socket socket;
 
@@ -20,9 +22,13 @@ public class ClientHandler {
 
     public String username;
 
+    public String message;
+
     public ClientHandler(ServerSocket serverSocket) {
         acceptClient(serverSocket);
         initStreams();
+
+        isListening = true;
         listenForPackets();
     }
 
@@ -49,13 +55,12 @@ public class ClientHandler {
             @Override
             public void run() {
 
-                while (socket.isConnected()) {
+                while (socket.isConnected() && isListening) {
                     Packet packet = null;
 
                     try {
                         packet = (Packet) objectInputStream.readObject();
                     } catch (IOException i) {
-                        System.out.println(username + " Has Disconnected!");
                         try {
                             socket.close();
                         } catch (IOException o) {
@@ -72,6 +77,9 @@ public class ClientHandler {
                             case INIT:
                                 username = packet.sender;
                                 isInitalized = true;
+                                break;
+                            case MESSAGE:
+                                message = username + ": " + packet.data;
                                 break;
                         }
                     }
@@ -97,5 +105,9 @@ public class ClientHandler {
             System.out.println("Error Occured While Trying to Send Packet");
             System.out.println(i);
         }
+    }
+
+    public void exit() {
+        isListening = false;
     }
 }

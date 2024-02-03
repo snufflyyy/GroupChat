@@ -17,6 +17,8 @@ public class Client {
     private ObjectOutputStream objectOutputStream;
     private ObjectInputStream objectInputStream;
 
+    private Scanner messageScanner;
+
     public static void main(String[] args) {
         new Client();
     }
@@ -25,18 +27,19 @@ public class Client {
         System.out.println("Welcome to the Chat Client");
         System.out.print("Please Input a Username to Begin: ");
 
-        try (Scanner usernameScanner = new Scanner(System.in)) {
-            username = usernameScanner.nextLine();
-        }
+        Scanner usernameScanner = new Scanner(System.in);
+        username = usernameScanner.nextLine();
 
         connect("localhost", 1234);
 
         initStreams();
 
-        System.out.println("Listening for Packets");
         listenForPackets();
 
         sendInit();
+
+        clientLoop();
+
     }
 
     private void connect(String ipAddress, int port) {
@@ -88,6 +91,29 @@ public class Client {
                 }
             }
         }).start();
+    }
+
+    public void clientLoop() {
+        while (socket.isConnected()) {
+            getMessage();
+        }
+    }
+
+    public void getMessage() {
+        String message = null;
+        Scanner messageScanner = new Scanner(System.in);
+        message = messageScanner.nextLine();
+
+        sendMessage(message);
+    }
+
+    public void sendMessage(String message) {
+        Packet messagePacket = new Packet();
+        messagePacket.type = PacketType.MESSAGE;
+        messagePacket.sender = username;
+        messagePacket.data = message;
+
+        sendPacket(messagePacket);
     }
 
     public void sendInit() {
